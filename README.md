@@ -1,6 +1,7 @@
 # shkbasic
 
-An MMBasic-compatible interpreter written in C, for the SharkDeck.
+An MMBasic-compatible interpreter written in C, plus a terminal IDE, for
+the SharkDeck.
 
 It exists so the MMBasic programs you already wrote for the PicoCalc have
 somewhere to run on a WalnutPi-class board: same language, same graphics
@@ -16,15 +17,17 @@ verbs, but drawing to `/dev/fb0` on a 480×320 panel instead of to a Pico.
 $ shkbasic examples/hello.bas
 $ shkbasic -g examples/deckstat.bas        # on the deck, uses /dev/fb0
 $ shkbasic -n -o shot.bmp examples/life.bas 40   # headless, writes a BMP
+$ shkide examples/life.bas                 # edit and run it in one place
 ```
 
 ## Build
 
 ```
-make                 # build for this machine
-make test            # run the test suite
-make deck            # cross-compile a static aarch64 binary
-sudo make install    # /usr/local/bin/shkbasic
+make                 # shkbasic and shkide, for this machine
+make test            # interpreter test suite
+make test-ide        # IDE tests (needs python3 and pyte)
+make deck            # cross-compile both, static, for aarch64
+sudo make install    # /usr/local/bin/{shkbasic,shkide}
 ```
 
 Cross-compiling needs `gcc-aarch64-linux-gnu`:
@@ -33,6 +36,7 @@ Cross-compiling needs `gcc-aarch64-linux-gnu`:
 sudo apt install gcc-aarch64-linux-gnu
 make deck
 scp shkbasic-aarch64 pi@192.168.1.164:~/shkbasic
+scp shkide-aarch64    pi@192.168.1.164:~/shkide
 ```
 
 Building on the deck itself works (`make`), but it burns thermal headroom you
@@ -259,6 +263,82 @@ else is rejected rather than passed to `printf`.
 `OPTION BASE 0|1`, `OPTION EXPLICIT`, `OPTION DEFAULT INTEGER|FLOAT|STRING|NONE`,
 `OPTION ANGLE DEGREES|RADIANS`, `OPTION ERROR SKIP|ABORT`.
 
+
+## shkide
+
+A terminal IDE: editor, file browser, and a run pane, in one screen.
+
+
+```
+ shkide  life.bas *                                        F1 for keys
+FILES                 |  9 CONST CELL = 6
+ ../                  | 10 CONST GW = 78      ' 78 * 6 = 468 pixels wide
+ deckstat.bas         | 11 CONST GH = 48
+ hello.bas            | 12
+ life.bas             | 13 DIM grid(GW, GH)
+ OUTPUT
+--- /home/pi/life.bas ---
+stopped after 12 generations
+--- exit 0 ---
+ ^S save  F5 run  F6 run+input  ^O files  ^F find  ^G goto  F1 help  ^Q quit
+```
+
+It is termios and ANSI escapes only, no ncurses, so it works over PuTTY and
+on the deck's own console with nothing installed. The layout follows the
+terminal: at 70 columns or more the file pane is a sidebar, below that it
+becomes a full-screen overlay you bring up with `^O` — which is what the
+deck's 60-column console wants.
+
+### Keys
+
+| | |
+|---|---|
+| `^S` save, `^A` save as, `^N` new | `^O` file pane / switch panes |
+| `^Z` undo, `^Y` redo | `^K` cut line, `^D` duplicate line |
+| `Tab` indent, `^T` unindent | `^F` find, `F3` find next, `^G` goto line |
+| `F5` run into the output pane | `F6` run with the real terminal |
+| `^E` jump to the reported error | `^L` cycle the output pane height |
+| `F1` help | `^Q` quit |
+
+In the file pane: `Enter` open, `Backspace` parent directory, `n` new file,
+`d` delete, `r` rename, `a` show non-BASIC files, `Tab` back to the editor.
+
+### Running from the editor
+
+`F5` saves the buffer, runs it with `shkbasic -n`, and streams stdout and
+stderr into the output pane. Saving first is deliberate: it means the line
+numbers in an error message point at the lines you are looking at. The
+program runs with its own directory as the working directory, so relative
+paths like `OPEN "data.txt"` behave the same as from a shell. `Esc` or `^C`
+stops a program that is taking too long.
+
+If the run reports an error, `^E` jumps the cursor to that line and the
+gutter marks it in red.
+
+`F6` is for programs that read the keyboard. It hands over the real terminal,
+clears it, and runs `shkbasic` with no capture, so `INPUT`, `INKEY$` and
+`LINE INPUT` behave normally; press any key to come back to the editor.
+
+Graphics programs run fine under `F5` — they draw to the in-memory canvas,
+and `SAVE IMAGE` still writes a BMP. To see them on the panel, run them from
+the console with `shkbasic -g`.
+
+### Editing
+
+Syntax highlighting reads the interpreter's own keyword and builtin tables
+(`src/keywords.h` and `src/builtins.h`, shared by both programs), so the
+editor cannot colour something as a builtin that `shkbasic` would then
+reject.
+
+Indentation follows the block structure: `FOR`, `DO`, `WHILE`, `SUB`,
+`FUNCTION`, `SELECT` and a block `IF` indent the next line, and typing
+`NEXT`, `LOOP`, `WEND`, `ENDIF`, `ELSE` or `CASE` pulls the current line back
+one level, once per line so `END` becoming `ENDIF` does not dedent twice.
+
+Undo keeps 64 whole-file snapshots. Saving writes to a neighbouring `.tmp`
+file and renames it, so a full SD card or a power cut cannot leave a
+half-written program behind.
+
 ## Errors
 
 By default an error prints the line and stops with exit status 1:
@@ -280,8 +360,10 @@ Honest list, so you don't go looking:
   reading `/sys` covers most of it for now.
 - No `SPRITE`, `BLIT`, `LOAD IMAGE`, or `MODE` switching.
 - No `SETTICK`/interrupts, no `ON KEY`.
-- No editor, no `SAVE`/`LOAD`/`LIST`/`RUN` immediate mode — write files and
-  run them.
+- No `SAVE`/`LOAD`/`LIST`/`RUN` immediate mode inside the interpreter — use
+  `shkide`, or write files and run them.
+- shkide has no block selection, no copy/paste between files, and no
+  multi-file tabs. One buffer at a time.
 - No `MID$(a$,n,m) = x$` assignment form, no `LONGSTRING`, no `MATH` or
   `SORT` statements.
 - `GOTO` out of a `FOR` or `DO` block leaves its stack entry behind; jump to a
@@ -300,8 +382,18 @@ src/eval.c     expression parser and the builtin function library
 src/exec.c     statement execution and control flow
 src/gfx.c      framebuffer and in-memory canvas, BMP writer
 src/con.c      termios raw keys, line input, millisecond timer
+src/keywords.h every reserved word; shared with the IDE
+src/builtins.h every builtin function name; shared with the IDE
 src/font6x8.h  generated by tools/mkfont.py from hand-drawn glyph art
+
+ide/term.c     raw mode, key decoding, one-write-per-frame drawing
+ide/edit.c     text buffer, editing, undo, search
+ide/browser.c  directory pane
+ide/syntax.c   highlighting, driven by the shared keyword tables
+ide/shkide.c   layout, event loop, dialogs, running programs
+
 tests/         .bas programs with expected output; sh tests/run.sh
+tests/ide_test.py   drives shkide in a pty and asserts on the screen
 examples/      hello.bas, deckstat.bas, life.bas
 ```
 

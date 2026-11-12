@@ -14,6 +14,7 @@
 #include <fnmatch.h>
 #include <unistd.h>
 #include "shk.h"
+#include "builtins.h"
 
 static void parse_or(Value *out);
 
@@ -223,13 +224,9 @@ static void dir_next(Value *out)
 /* builtin table                                                       */
 /* ------------------------------------------------------------------ */
 static const char *builtins[] = {
-  "ABS","ACOS","ASC","ASIN","ATN","ATAN2","BIN$","BOUND","CHOICE","CHR$",
-  "CINT","COS","CWD$","DATE$","DEG","DIR$","EOF","EXP","FIELD$","FIX",
-  "FORMAT$","HEX$","INKEY$","INSTR","INT","LCASE$","LEFT$","LEN","LOC",
-  "LOF","LOG","LTRIM$","MAX","MID$","MIN","OCT$","PI","RAD","RGB",
-  "RIGHT$","RND","RTRIM$","SGN","SIN","SPACE$","SQR","STR$","STRING$",
-  "TAB","TAN","TIME$","TIMER","TRIM$","UCASE$","VAL","REPLACE$","INV",
-  "MM.HRES","MM.VRES","MM.DEVICE$","MM.VER","MM.CMDLINE$","INPUT$","POS","ASIN",
+#define B(n) n,
+  BUILTIN_LIST
+#undef B
   NULL
 };
 
