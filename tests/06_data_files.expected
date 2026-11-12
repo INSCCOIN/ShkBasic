@@ -1,0 +1,13 @@
+10 20 thirty 
+90
+restored10
+from label777
+[line one]
+[line two]
+eof=0
+[42,3.5]
+eof=1
+lines=4
+last=[appended]
+alpha|7|2.5
+data done

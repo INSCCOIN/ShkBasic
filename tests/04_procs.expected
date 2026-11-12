@@ -1,0 +1,15 @@
+hello SharkDeck
+hello walnut
+49
+7
+byref x =11
+byval y =10
+fact(6) =720
+fib(10) =55
+sum =15
+scaled =10 50
+upper = QUIET
+global g =10
+calls =3
+early =6
+early =-1

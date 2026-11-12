@@ -1,0 +1,21 @@
+shkbasic: line 4: Division by zero (skipped)
+after divide by zero
+shkbasic: line 8: Index 9 out of bounds for SMALL (skipped)
+after bad index
+shkbasic: line 11: SQR of a negative number (skipped)
+after sqr
+shkbasic: line 14: Cannot mix strings and numbers here (skipped)
+after type mix
+shkbasic: line 17: undefined_function_xyz is not a known function or declared array (skipped)
+after unknown function
+shkbasic: line 20: GOTO target not found (skipped)
+after bad goto
+shkbasic: line 23: Cannot open /nonexistent/dir/file.txt (skipped)
+after bad open
+shkbasic: line 26: nosuchfile$ is not a known function or declared array (skipped)
+after bad array
+shkbasic: line 29: a user raised error (skipped)
+after user error
+shkbasic: line 33: Cannot assign to constant FIXED (skipped)
+after const write
+errors done

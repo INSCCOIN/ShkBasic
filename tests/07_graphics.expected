@@ -1,0 +1,18 @@
+res=480x320
+cls=0
+pixel=1
+neighbour=0
+line=111
+box edge=11
+box hollow=1
+box fill=11
+circle=11
+circle fill=1
+triangle=1
+rbox=1
+text pixels>10=1
+centred ok
+cls to bg=1
+fg from COLOUR=1
+saved
+graphics done
